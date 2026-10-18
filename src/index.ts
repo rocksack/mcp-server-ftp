@@ -129,6 +129,74 @@ server.tool(
   }
 );
 
+// Register upload-file-from-path tool
+server.tool(
+  "upload-file-from-path",
+  "Upload a local file to the FTP server by path. Use this instead of upload-file whenever the file already exists on disk: the content is not passed through the model, so there is no size limit and binary files (images, fonts, archives) stay byte-exact.",
+  {
+    localPath: z.string().describe("Absolute path of the file on the local machine"),
+    remotePath: z.string().describe("Destination path on the FTP server"),
+  },
+  async ({ localPath, remotePath }) => {
+    try {
+      const size = await ftpClient.uploadFileFromPath(remotePath, localPath);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Uploaded ${localPath} to ${remotePath} (${formatSize(size)})`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Error uploading file from path: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Register download-file-to-path tool
+server.tool(
+  "download-file-to-path",
+  "Download a file from the FTP server straight to a local path. Use this instead of download-file for large or binary files: the content is written to disk instead of being returned, so it costs no context.",
+  {
+    remotePath: z.string().describe("Path of the file on the FTP server"),
+    localPath: z.string().describe("Absolute destination path on the local machine. Missing directories are created."),
+  },
+  async ({ remotePath, localPath }) => {
+    try {
+      const size = await ftpClient.downloadFileToPath(remotePath, localPath);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Downloaded ${remotePath} to ${localPath} (${formatSize(size)})`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Error downloading file to path: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 // Register create-directory tool
 server.tool(
   "create-directory",

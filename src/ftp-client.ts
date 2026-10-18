@@ -116,6 +116,49 @@ export class FtpClient {
     }
   }
 
+  // Upload straight from a local file. Unlike uploadFile() the content never
+  // has to travel through the model context, so size is irrelevant and binary
+  // files (images, fonts, archives) transfer byte-exact.
+  async uploadFileFromPath(remotePath: string, localPath: string): Promise<number> {
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`Local file not found: ${localPath}`);
+    }
+    const stat = fs.statSync(localPath);
+    if (!stat.isFile()) {
+      throw new Error(`Local path is not a file: ${localPath}`);
+    }
+
+    try {
+      await this.connect();
+      await this.client.uploadFrom(localPath, remotePath);
+      await this.disconnect();
+      return stat.size;
+    } catch (error) {
+      console.error("Upload from path error:", error);
+      throw new Error(`Failed to upload file from path: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Download straight to a local file. Counterpart to uploadFileFromPath():
+  // the content is not returned, so large and binary files cost no context.
+  async downloadFileToPath(remotePath: string, localPath: string): Promise<number> {
+    try {
+      const targetDir = path.dirname(localPath);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      await this.connect();
+      await this.client.downloadTo(localPath, remotePath);
+      await this.disconnect();
+
+      return fs.statSync(localPath).size;
+    } catch (error) {
+      console.error("Download to path error:", error);
+      throw new Error(`Failed to download file to path: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   async createDirectory(remotePath: string): Promise<boolean> {
     try {
       await this.connect();
