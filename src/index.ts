@@ -129,6 +129,74 @@ server.tool(
   }
 );
 
+// Register upload-file-from-path tool (NEU - für große oder binäre Dateien)
+server.tool(
+  "upload-file-from-path",
+  "Upload a file from the local filesystem directly to the FTP server. Use this for large files (>30KB) or binary files (images, ZIPs, PDFs) where 'upload-file' would fail. The file is streamed directly without going through the model context.",
+  {
+    localPath: z.string().describe("Absolute path to the local file on the container filesystem (e.g. /home/claude/build/inc/file.php or /mnt/user-data/outputs/foo.zip)"),
+    remotePath: z.string().describe("Destination path on the FTP server"),
+  },
+  async ({ localPath, remotePath }) => {
+    try {
+      await ftpClient.uploadFileFromPath(localPath, remotePath);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `File successfully uploaded from ${localPath} to ${remotePath}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Error uploading file from path: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Register download-file-to-path tool (NEU - für große Dateien, schont Modell-Kontext)
+server.tool(
+  "download-file-to-path",
+  "Download a file from the FTP server directly to a local path on the container filesystem. Use this for large files where 'download-file' would consume too much model context. The file is streamed directly without being returned as a string.",
+  {
+    remotePath: z.string().describe("Path of the file on the FTP server"),
+    localPath: z.string().describe("Destination path on the local filesystem (e.g. /home/claude/build/inc/file.php). Parent directories will be created if needed."),
+  },
+  async ({ remotePath, localPath }) => {
+    try {
+      await ftpClient.downloadFileToPath(remotePath, localPath);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `File successfully downloaded from ${remotePath} to ${localPath}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+text: `Error downloading file to path: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 // Register create-directory tool
 server.tool(
   "create-directory",
