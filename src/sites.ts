@@ -19,9 +19,6 @@ export interface SiteList {
   source: "nas" | "cache";
 }
 
-// Im Server fest gesperrt, unabhaengig von der Liste (MiReNa: nur ueber tools/ftp.mjs)
-export const ALWAYS_BLOCKED = new Set(["mirena"]);
-
 const LIST_FILE = process.env.FTP_SITES_FILE || "\\\\192.168.1.245\\mike\\claude-sync\\ftp-sites.json";
 const CACHE_FILE =
   process.env.FTP_SITES_CACHE ||
@@ -68,7 +65,6 @@ export async function loadSites(): Promise<SiteList> {
 
 export async function resolveSite(key: string): Promise<{ slug: string; site: Site }> {
   const slug = key.trim().toLowerCase();
-  if (ALWAYS_BLOCKED.has(slug)) throw new Error(`Seite '${slug}' ist im Server gesperrt`);
   const { sites } = await loadSites();
   const site = sites[slug];
   if (!site) throw new Error(`Unbekannte Seite '${slug}'. Gueltige Seiten: list-sites`);

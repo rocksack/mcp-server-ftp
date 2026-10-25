@@ -6,7 +6,7 @@ import { Client } from "basic-ftp";
 import { Readable, Writable } from "stream";
 import * as fs from "fs";
 import * as path from "path";
-import { loadSites, resolveSite, ALWAYS_BLOCKED } from "./sites.js";
+import { loadSites, resolveSite } from "./sites.js";
 import { getFtpLogin } from "./ftpcrypt.js";
 
 // Ein Konnektor fuer alle Seiten: jedes Werkzeug nimmt 'site'. Neue Verbindung je Aufruf.
@@ -46,7 +46,7 @@ function fmtSize(b: number) {
 server.tool("list-sites", "List available FTP site keys", {}, async () => {
   try {
     const { sites, source } = await loadSites();
-    const keys = Object.keys(sites).filter((k) => !ALWAYS_BLOCKED.has(k) && !sites[k].blocked).sort();
+    const keys = Object.keys(sites).filter((k) => !sites[k].blocked).sort();
     return ok(`${keys.length} sites (list from ${source}): ${keys.join(", ")}`);
   } catch (e) { return fail("Error listing sites", e); }
 });
