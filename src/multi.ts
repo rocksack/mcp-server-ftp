@@ -7,7 +7,7 @@ import { Readable, Writable } from "stream";
 import * as fs from "fs";
 import * as path from "path";
 import { loadSites, resolveSite, ALWAYS_BLOCKED } from "./sites.js";
-import { getFtpLogin } from "./vault.js";
+import { getFtpLogin } from "./ftpcrypt.js";
 
 // Ein Konnektor fuer alle Seiten: jedes Werkzeug nimmt 'site'. Neue Verbindung je Aufruf.
 const server = new McpServer({ name: "ftp", version: "2.0.0" });
@@ -16,7 +16,7 @@ const site = z.string().describe("Site key, see list-sites");
 
 async function withFtp<T>(siteKey: string, fn: (c: Client) => Promise<T>): Promise<T> {
   const { slug, site: s } = await resolveSite(siteKey);
-  const login = await getFtpLogin(slug);
+  const login = await getFtpLogin(slug, s);
   const client = new Client(s.timeout ?? parseInt(process.env.FTP_TIMEOUT || "90000"));
   client.ftp.verbose = false;
   try {

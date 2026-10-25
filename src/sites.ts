@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
-// Seitenliste (ohne Passwoerter). Zentral auf der NAS, bei jedem Aufruf frisch gelesen.
+// Seitenliste (Passwoerter nur verschluesselt im Feld pw). Zentral auf der NAS, bei jedem Aufruf frisch gelesen.
 // NAS nicht erreichbar -> letzte bekannte Liste aus dem lokalen Zwischenspeicher.
 export interface Site {
   host: string;
@@ -11,6 +11,7 @@ export interface Site {
   secure?: boolean;
   timeout?: number;
   blocked?: boolean;
+  pw?: string; // Passwort, AES-256-GCM-verschluesselt (ftpcrypt.ts)
 }
 
 export interface SiteList {
