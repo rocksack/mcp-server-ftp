@@ -3,7 +3,6 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
-// Define FTP config interface
 export interface FtpConfig {
   host: string;
   port: number;
@@ -12,24 +11,21 @@ export interface FtpConfig {
   secure: boolean;
 }
 
-// Create FTP client wrapper
 export class FtpClient {
   private client: Client;
   private config: FtpConfig;
   private tempDir: string;
 
   constructor(config: FtpConfig) {
-    this.client = new Client();
+    this.client = new Client(parseInt(process.env.FTP_TIMEOUT || "90000"));
     this.config = config;
     this.tempDir = path.join(os.tmpdir(), "mcp-ftp-temp");
     
-    // Create temp directory if it doesn't exist
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
     
-    // Set client options
-    this.client.ftp.verbose = false; // Set to true for debugging
+    this.client.ftp.verbose = false;
   }
 
   async connect(): Promise<void> {
@@ -72,22 +68,11 @@ export class FtpClient {
   async downloadFile(remotePath: string): Promise<{filePath: string, content: string}> {
     try {
       await this.connect();
-      
-      // Create a unique local filename
       const tempFilePath = path.join(this.tempDir, `download-${Date.now()}-${path.basename(remotePath)}`);
-      
-      // Download the file
       await this.client.downloadTo(tempFilePath, remotePath);
-      
-      // Read the file content
       const content = fs.readFileSync(tempFilePath, 'utf8');
-      
       await this.disconnect();
-      
-      return {
-        filePath: tempFilePath,
-        content
-      };
+      return { filePath: tempFilePath, content };
     } catch (error) {
       console.error("Download file error:", error);
       throw new Error(`Failed to download file: ${error instanceof Error ? error.message : String(error)}`);
@@ -97,22 +82,46 @@ export class FtpClient {
   async uploadFile(remotePath: string, content: string): Promise<boolean> {
     try {
       await this.connect();
-      
-      // Create a temporary file with the content
       const tempFilePath = path.join(this.tempDir, `upload-${Date.now()}-${path.basename(remotePath)}`);
       fs.writeFileSync(tempFilePath, content);
-      
-      // Upload the file
       await this.client.uploadFrom(tempFilePath, remotePath);
-      
-      // Clean up
       fs.unlinkSync(tempFilePath);
-      
       await this.disconnect();
       return true;
     } catch (error) {
       console.error("Upload file error:", error);
       throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async uploadFileFromPath(localPath: string, remotePath: string): Promise<boolean> {
+    try {
+      if (!fs.existsSync(localPath)) {
+        throw new Error(`Local file not found: ${localPath}`);
+      }
+      await this.connect();
+      await this.client.uploadFrom(localPath, remotePath);
+      await this.disconnect();
+      return true;
+    } catch (error) {
+      console.error("Upload file from path error:", error);
+      throw new Error(`Failed to upload file from path: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async downloadFileToPath(remotePath: string, localPath: string): Promise<boolean> {
+    try {
+      const targetDir = path.dirname(localPath);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      await this.connect();
+      await this.client.downloadTo(localPath, remotePath);
+      await this.disconnect();
+      return true;
+    } catch (error) {
+      console.error("Download file to path error:", error);
+      throw new Error(`Failed to download file to path: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
